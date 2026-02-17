@@ -161,7 +161,10 @@ print('Session token: ' + sessionToken);
     
     def test_attendance_checkin(self):
         """Test attendance check-in"""
-        success, data = self.make_request("POST", "/attendance/check-in")
+        checkin_data = {
+            "session_id": f"session_{int(time.time())}"
+        }
+        success, data = self.make_request("POST", "/attendance/check-in", checkin_data)
         if success:
             self.log_result("/api/attendance/check-in", True, "Check-in working", data)
         else:
