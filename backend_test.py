@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional
 
 class BackendTester:
     def __init__(self):
-        self.base_url = "https://studio-hub-elite.preview.emergentagent.com/api"
+        self.base_url = "https://hub-elite-app.preview.emergentagent.com/api"
         self.session_token = None
         self.user_id = None
         self.test_results = {}

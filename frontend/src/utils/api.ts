@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 
 const API_BASE = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
   process.env.EXPO_PUBLIC_BACKEND_URL || 
-  'https://studio-hub-elite.preview.emergentagent.com';
+  'https://hub-elite-app.preview.emergentagent.com';
 
 export const api = {
   baseUrl: API_BASE,
