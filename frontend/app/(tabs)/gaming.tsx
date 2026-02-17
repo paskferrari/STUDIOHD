@@ -17,16 +17,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
 import { Card, Button, Avatar, Badge, LoadingSkeleton } from '../../src/components/ui';
+import { AnimatedContainer, PressableScale } from '../../src/components/animation';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/utils/api';
+import { t } from '../../src/i18n';
 
 const GAME_TYPES = [
-  { id: 'fps', label: 'FPS', icon: 'skull' },
-  { id: 'fighting', label: 'Fighting', icon: 'flash' },
-  { id: 'racing', label: 'Racing', icon: 'car-sport' },
-  { id: 'sports', label: 'Sports', icon: 'football' },
-  { id: 'strategy', label: 'Strategy', icon: 'grid' },
-  { id: 'battle_royale', label: 'Battle Royale', icon: 'flame' },
+  { id: 'fps', labelKey: 'gaming.gameTypes.fps', icon: 'skull' },
+  { id: 'fighting', labelKey: 'gaming.gameTypes.fighting', icon: 'flash' },
+  { id: 'racing', labelKey: 'gaming.gameTypes.racing', icon: 'car-sport' },
+  { id: 'sports', labelKey: 'gaming.gameTypes.sports', icon: 'football' },
+  { id: 'strategy', labelKey: 'gaming.gameTypes.strategy', icon: 'grid' },
+  { id: 'battle_royale', labelKey: 'gaming.gameTypes.battle_royale', icon: 'flame' },
 ];
 
 export default function Gaming() {
@@ -66,7 +68,7 @@ export default function Gaming() {
 
   const handleCreateMatch = async () => {
     if (!newMatch.title.trim() || !newMatch.game_name.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('common.error'), t('gaming.fillAllFields'));
       return;
     }
 
@@ -80,28 +82,20 @@ export default function Gaming() {
       });
       setShowCreateModal(false);
       setNewMatch({ title: '', game_type: 'fps', game_name: '' });
-      Alert.alert('Success', 'Match created!');
+      Alert.alert(t('common.success'), t('gaming.matchCreated'));
       await loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create match');
+      Alert.alert(t('common.error'), error.message || t('errors.generic'));
     } finally {
       setCreateLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return colors.status.success;
-      case 'in_progress': return colors.accent.secondary;
-      default: return colors.text.tertiary;
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      default: return 'Pending';
+      case 'completed': return t('gaming.completed');
+      case 'in_progress': return t('gaming.inProgress');
+      default: return t('gaming.pending');
     }
   };
 
@@ -137,142 +131,154 @@ export default function Gaming() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Gaming</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Ionicons name="add" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-        </View>
+        <AnimatedContainer animation="fadeInUp">
+          <View style={styles.header}>
+            <Text style={styles.pageTitle}>{t('gaming.title')}</Text>
+            <PressableScale
+              style={styles.addButton}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Ionicons name="add" size={24} color={colors.text.primary} />
+            </PressableScale>
+          </View>
+        </AnimatedContainer>
 
         {/* Stats */}
-        <View style={styles.statsRow}>
-          <Card style={styles.statCard}>
-            <Ionicons name="game-controller" size={20} color={colors.accent.tertiary} />
-            <Text style={styles.statValue}>{totalMatches}</Text>
-            <Text style={styles.statLabel}>Matches</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Ionicons name="trophy" size={20} color={colors.accent.secondary} />
-            <Text style={styles.statValue}>{wins}</Text>
-            <Text style={styles.statLabel}>Wins</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Ionicons name="stats-chart" size={20} color={colors.status.info} />
-            <Text style={styles.statValue}>
-              {completedMatches > 0 ? Math.round((wins / completedMatches) * 100) : 0}%
-            </Text>
-            <Text style={styles.statLabel}>Win Rate</Text>
-          </Card>
-        </View>
+        <AnimatedContainer animation="fadeInUp" delay={100}>
+          <View style={styles.statsRow}>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="game-controller" size={20} color={colors.accent.tertiary} />
+              <Text style={styles.statValue}>{totalMatches}</Text>
+              <Text style={styles.statLabel}>{t('gaming.totalMatches')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="trophy" size={20} color={colors.accent.secondary} />
+              <Text style={styles.statValue}>{wins}</Text>
+              <Text style={styles.statLabel}>{t('gaming.wins')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="stats-chart" size={20} color={colors.status.info} />
+              <Text style={styles.statValue}>
+                {completedMatches > 0 ? Math.round((wins / completedMatches) * 100) : 0}%
+              </Text>
+              <Text style={styles.statLabel}>{t('gaming.winRate')}</Text>
+            </PressableScale>
+          </View>
+        </AnimatedContainer>
 
         {/* Active Matches */}
         {matches.filter(m => m.status !== 'completed').length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Active Matches</Text>
+            <AnimatedContainer animation="fadeInUp" delay={200}>
+              <Text style={styles.sectionTitle}>{t('gaming.activeMatches')}</Text>
+            </AnimatedContainer>
             {matches
               .filter(m => m.status !== 'completed')
-              .map((match) => (
-                <Card key={match.match_id} style={styles.matchCard}>
-                  <TouchableOpacity
+              .map((match, index) => (
+                <AnimatedContainer key={match.match_id} animation="fadeInUp" delay={250 + index * 50}>
+                  <Card style={styles.matchCard}>
+                    <PressableScale
+                      onPress={() => router.push(`/match/${match.match_id}`)}
+                    >
+                      <View style={styles.matchHeader}>
+                        <View style={styles.gameTypeIcon}>
+                          <Ionicons
+                            name={GAME_TYPES.find(g => g.id === match.game_type)?.icon as any || 'game-controller'}
+                            size={24}
+                            color={colors.accent.tertiary}
+                          />
+                        </View>
+                        <View style={styles.matchInfo}>
+                          <Text style={styles.matchTitle}>{match.title}</Text>
+                          <Text style={styles.gameName}>{match.game_name}</Text>
+                        </View>
+                        <Badge
+                          label={getStatusLabel(match.status)}
+                          variant={match.status === 'in_progress' ? 'warning' : 'default'}
+                          size="sm"
+                        />
+                      </View>
+
+                      {/* Participants */}
+                      <View style={styles.participantsRow}>
+                        <View style={styles.avatarStack}>
+                          {match.participant_details?.slice(0, 4).map((p: any, i: number) => (
+                            <View key={p.user_id} style={[styles.stackedAvatar, { marginLeft: i > 0 ? -10 : 0 }]}>
+                              <Avatar uri={p.picture} name={p.name} size="sm" />
+                            </View>
+                          ))}
+                        </View>
+                        <Text style={styles.participantsText}>
+                          {t('gaming.players', { count: match.participants?.length || 0 })}
+                        </Text>
+                      </View>
+                    </PressableScale>
+                  </Card>
+                </AnimatedContainer>
+              ))}
+          </>
+        )}
+
+        {/* Completed Matches */}
+        <AnimatedContainer animation="fadeInUp" delay={300}>
+          <Text style={styles.sectionTitle}>{t('gaming.matchHistory')}</Text>
+        </AnimatedContainer>
+        {matches.filter(m => m.status === 'completed').length > 0 ? (
+          matches
+            .filter(m => m.status === 'completed')
+            .map((match, index) => (
+              <AnimatedContainer key={match.match_id} animation="fadeInUp" delay={350 + index * 50}>
+                <Card style={styles.matchCard}>
+                  <PressableScale
                     onPress={() => router.push(`/match/${match.match_id}`)}
-                    activeOpacity={0.7}
                   >
                     <View style={styles.matchHeader}>
-                      <View style={styles.gameTypeIcon}>
+                      <View style={[styles.gameTypeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
                         <Ionicons
                           name={GAME_TYPES.find(g => g.id === match.game_type)?.icon as any || 'game-controller'}
                           size={24}
-                          color={colors.accent.tertiary}
+                          color={colors.status.success}
                         />
                       </View>
                       <View style={styles.matchInfo}>
                         <Text style={styles.matchTitle}>{match.title}</Text>
                         <Text style={styles.gameName}>{match.game_name}</Text>
                       </View>
-                      <Badge
-                        label={getStatusLabel(match.status)}
-                        variant={match.status === 'in_progress' ? 'warning' : 'default'}
-                        size="sm"
-                      />
+                      {match.winner_id === user?.user_id ? (
+                        <Badge label={t('gaming.victory')} variant="success" size="sm" icon="trophy" />
+                      ) : (
+                        <Badge label={t('gaming.completed')} variant="default" size="sm" />
+                      )}
                     </View>
 
-                    {/* Participants */}
-                    <View style={styles.participantsRow}>
-                      <View style={styles.avatarStack}>
-                        {match.participant_details?.slice(0, 4).map((p: any, i: number) => (
-                          <View key={p.user_id} style={[styles.stackedAvatar, { marginLeft: i > 0 ? -10 : 0 }]}>
-                            <Avatar uri={p.picture} name={p.name} size="sm" />
+                    {/* Scores */}
+                    {match.scores && match.scores.length > 0 && (
+                      <View style={styles.scoresRow}>
+                        {match.scores.slice(0, 3).map((score: any, i: number) => (
+                          <View key={score.score_id} style={styles.scoreItem}>
+                            <Text style={styles.scoreRank}>#{i + 1}</Text>
+                            <Text style={styles.scoreValue}>{score.score}</Text>
                           </View>
                         ))}
                       </View>
-                      <Text style={styles.participantsText}>
-                        {match.participants?.length || 0} player{(match.participants?.length || 0) !== 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </Card>
-              ))}
-          </>
-        )}
-
-        {/* Completed Matches */}
-        <Text style={styles.sectionTitle}>Match History</Text>
-        {matches.filter(m => m.status === 'completed').length > 0 ? (
-          matches
-            .filter(m => m.status === 'completed')
-            .map((match) => (
-              <Card key={match.match_id} style={styles.matchCard}>
-                <TouchableOpacity
-                  onPress={() => router.push(`/match/${match.match_id}`)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.matchHeader}>
-                    <View style={[styles.gameTypeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                      <Ionicons
-                        name={GAME_TYPES.find(g => g.id === match.game_type)?.icon as any || 'game-controller'}
-                        size={24}
-                        color={colors.status.success}
-                      />
-                    </View>
-                    <View style={styles.matchInfo}>
-                      <Text style={styles.matchTitle}>{match.title}</Text>
-                      <Text style={styles.gameName}>{match.game_name}</Text>
-                    </View>
-                    {match.winner_id === user?.user_id ? (
-                      <Badge label="Victory!" variant="success" size="sm" icon="trophy" />
-                    ) : (
-                      <Badge label="Completed" variant="default" size="sm" />
                     )}
-                  </View>
-
-                  {/* Scores */}
-                  {match.scores && match.scores.length > 0 && (
-                    <View style={styles.scoresRow}>
-                      {match.scores.slice(0, 3).map((score: any, i: number) => (
-                        <View key={score.score_id} style={styles.scoreItem}>
-                          <Text style={styles.scoreRank}>#{i + 1}</Text>
-                          <Text style={styles.scoreValue}>{score.score}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </Card>
+                  </PressableScale>
+                </Card>
+              </AnimatedContainer>
             ))
         ) : (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="game-controller-outline" size={48} color={colors.text.tertiary} />
-            <Text style={styles.emptyText}>No matches yet</Text>
-            <Text style={styles.emptySubtext}>Create a match to start competing!</Text>
-            <Button
-              title="Create Match"
-              onPress={() => setShowCreateModal(true)}
-              style={{ marginTop: spacing.md }}
-            />
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={350}>
+            <Card style={styles.emptyCard}>
+              <Ionicons name="game-controller-outline" size={48} color={colors.text.tertiary} />
+              <Text style={styles.emptyText}>{t('gaming.noMatches')}</Text>
+              <Text style={styles.emptySubtext}>{t('gaming.createFirst')}</Text>
+              <Button
+                title={t('gaming.createMatch')}
+                onPress={() => setShowCreateModal(true)}
+                style={{ marginTop: spacing.md }}
+              />
+            </Card>
+          </AnimatedContainer>
         )}
       </ScrollView>
 
@@ -289,36 +295,36 @@ export default function Gaming() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Match</Text>
+              <Text style={styles.modalTitle}>{t('gaming.createMatch')}</Text>
               <TouchableOpacity onPress={() => setShowCreateModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Match Title *</Text>
+              <Text style={styles.inputLabel}>{t('gaming.matchTitle')} *</Text>
               <TextInput
                 style={styles.input}
                 value={newMatch.title}
                 onChangeText={(text) => setNewMatch({ ...newMatch, title: text })}
-                placeholder="e.g., Friday Night Tournament"
+                placeholder={t('gaming.matchTitlePlaceholder')}
                 placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Game Name *</Text>
+              <Text style={styles.inputLabel}>{t('gaming.gameName')} *</Text>
               <TextInput
                 style={styles.input}
                 value={newMatch.game_name}
                 onChangeText={(text) => setNewMatch({ ...newMatch, game_name: text })}
-                placeholder="e.g., Call of Duty, FIFA 25"
+                placeholder={t('gaming.gameNamePlaceholder')}
                 placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Game Type</Text>
+              <Text style={styles.inputLabel}>{t('gaming.gameType')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.gameTypesRow}>
                   {GAME_TYPES.map((type) => (
@@ -341,7 +347,7 @@ export default function Gaming() {
                           newMatch.game_type === type.id && { color: colors.accent.tertiary },
                         ]}
                       >
-                        {type.label}
+                        {t(type.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -350,7 +356,7 @@ export default function Gaming() {
             </View>
 
             <Button
-              title="Create Match"
+              title={t('gaming.createMatch')}
               onPress={handleCreateMatch}
               loading={createLoading}
               size="lg"
@@ -404,6 +410,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: spacing.xs,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   statValue: {
     fontSize: typography.sizes.xl,
@@ -415,6 +423,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.text.tertiary,
     marginTop: spacing.xs,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: typography.sizes.lg,
@@ -499,6 +508,8 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   emptyText: {
     fontSize: typography.sizes.lg,
