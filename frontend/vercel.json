@@ -4,12 +4,10 @@
   "outputDirectory": "dist",
   "framework": null,
   "cleanUrls": true,
-  "redirects": [
-    { "source": "/auth-callback", "destination": "/auth-callback.html" }
-  ],
+  "redirects": [],
   "rewrites": [
     { "source": "/match/:id", "destination": "/match/[id].html" },
     { "source": "/track/:id", "destination": "/track/[id].html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/auth-callback", "destination": "/auth-callback.html" }
   ]
 }
