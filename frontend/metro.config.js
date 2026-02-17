@@ -11,6 +11,14 @@ config.cacheStores = [
   new FileStore({ root: path.join(root, 'cache') }),
 ];
 
+// Fix import.meta issue with Zustand 5.x ESM bundles
+config.resolver.unstable_enablePackageExports = true;
+config.resolver.unstable_conditionNames = [
+  'require',        // Prioritize CommonJS first to avoid import.meta
+  'react-native',
+  'browser',
+  'default'
+];
 
 // // Exclude unnecessary directories from file watching
 // config.watchFolders = [__dirname];
