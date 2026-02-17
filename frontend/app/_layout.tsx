@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../src/store/authStore';
@@ -11,6 +11,10 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  
+  // Check if navigation is ready
+  const navigationState = useRootNavigationState();
+  const isNavigationReady = navigationState?.key != null;
 
   // Check auth status on mount
   useEffect(() => {
@@ -19,23 +23,26 @@ export default function RootLayout() {
 
   // Handle navigation based on auth state
   useEffect(() => {
-    if (!isReady || isLoading) return;
+    if (!isReady || isLoading || !isNavigationReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
+    const isLoginScreen = segments[0] === 'login';
+    const isAuthCallback = segments[0] === 'auth-callback';
+    const isHelpScreen = segments[0] === 'help';
 
-    if (!user && !inAuthGroup && segments[0] !== 'login' && segments[0] !== 'auth-callback') {
+    if (!user && !inAuthGroup && !isLoginScreen && !isAuthCallback) {
       // Not authenticated, redirect to login
       router.replace('/login');
     } else if (user && !user.onboarding_completed && !inOnboarding) {
       // Authenticated but onboarding not complete
       router.replace('/onboarding/profile-setup');
-    } else if (user && user.onboarding_completed && (segments[0] === 'login' || segments[0] === 'auth-callback' || inOnboarding)) {
+    } else if (user && user.onboarding_completed && (isLoginScreen || isAuthCallback || inOnboarding)) {
       // Authenticated and onboarding complete, go to main app
       router.replace('/(tabs)');
     }
-  }, [user, segments, isLoading, isReady]);
+  }, [user, segments, isLoading, isReady, isNavigationReady]);
 
   const checkAuth = async () => {
     try {
@@ -72,6 +79,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth-callback" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="help" />
         <Stack.Screen name="track/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="match/[id]" options={{ presentation: 'modal' }} />
       </Stack>
