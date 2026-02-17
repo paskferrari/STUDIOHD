@@ -1,5 +1,14 @@
 {
-  "buildCommand": "yarn build:web",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build:web && cp dist/+not-found.html dist/404.html",
   "outputDirectory": "dist",
-  "framework": null
+  "framework": null,
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/auth-callback", "destination": "/auth-callback.html" }
+  ],
+  "rewrites": [
+    { "source": "/match/:id", "destination": "/match/[id].html" },
+    { "source": "/track/:id", "destination": "/track/[id].html" }
+  ]
 }
