@@ -3,6 +3,10 @@
   "buildCommand": "npm run build:web --prefix frontend && cp frontend/dist/+not-found.html frontend/dist/404.html",
   "devCommand": "npm run web --prefix frontend",
   "outputDirectory": "frontend/dist",
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/auth-callback", "destination": "/auth-callback.html" }
+  ],
   "rewrites": [
     { "source": "/match/:id", "destination": "/match/[id].html" },
     { "source": "/track/:id", "destination": "/track/[id].html" }
