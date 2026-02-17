@@ -11,14 +11,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
 import { Card, Avatar, Badge, LoadingSkeleton } from '../../src/components/ui';
+import { AnimatedContainer, PressableScale } from '../../src/components/animation';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/utils/api';
+import { t } from '../../src/i18n';
 
 const PERIODS = [
-  { id: 'weekly', label: 'Weekly' },
-  { id: 'monthly', label: 'Monthly' },
-  { id: 'seasonal', label: 'Season' },
-  { id: 'all_time', label: 'All Time' },
+  { id: 'weekly', labelKey: 'leaderboards.periods.weekly' },
+  { id: 'monthly', labelKey: 'leaderboards.periods.monthly' },
+  { id: 'seasonal', labelKey: 'leaderboards.periods.seasonal' },
+  { id: 'all_time', labelKey: 'leaderboards.periods.all_time' },
 ];
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -79,22 +81,9 @@ export default function Leaderboards() {
     setRefreshing(false);
   }, [selectedCategory, selectedPeriod]);
 
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1: return '#FFD700'; // Gold
-      case 2: return '#C0C0C0'; // Silver
-      case 3: return '#CD7F32'; // Bronze
-      default: return colors.text.tertiary;
-    }
-  };
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return 'trophy';
-      case 2: return 'medal';
-      case 3: return 'medal-outline';
-      default: return null;
-    }
+  const getCategoryName = (categoryId: string) => {
+    const key = `leaderboards.categories.${categoryId}`;
+    return t(key);
   };
 
   const userRank = leaderboardData?.entries?.findIndex((e: any) => e.user_id === user?.user_id) + 1 || null;
@@ -102,70 +91,76 @@ export default function Leaderboards() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.pageTitle}>Rankings</Text>
-        {userRank && (
-          <Badge label={`#${userRank}`} variant="gold" />
-        )}
-      </View>
+      <AnimatedContainer animation="fadeInUp">
+        <View style={styles.header}>
+          <Text style={styles.pageTitle}>{t('leaderboards.title')}</Text>
+          {userRank && (
+            <Badge label={`#${userRank}`} variant="gold" />
+          )}
+        </View>
+      </AnimatedContainer>
 
       {/* Category Selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesRow}
-      >
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[
-              styles.categoryButton,
-              selectedCategory === cat.id && {
-                borderColor: CATEGORY_COLORS[cat.id],
-                backgroundColor: `${CATEGORY_COLORS[cat.id]}15`,
-              },
-            ]}
-            onPress={() => setSelectedCategory(cat.id)}
-          >
-            <Ionicons
-              name={CATEGORY_ICONS[cat.id] as any}
-              size={18}
-              color={selectedCategory === cat.id ? CATEGORY_COLORS[cat.id] : colors.text.tertiary}
-            />
-            <Text
+      <AnimatedContainer animation="fadeInUp" delay={100}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesRow}
+        >
+          {categories.map((cat) => (
+            <PressableScale
+              key={cat.id}
               style={[
-                styles.categoryText,
-                selectedCategory === cat.id && { color: CATEGORY_COLORS[cat.id] },
+                styles.categoryButton,
+                selectedCategory === cat.id && {
+                  borderColor: CATEGORY_COLORS[cat.id],
+                  backgroundColor: `${CATEGORY_COLORS[cat.id]}15`,
+                },
               ]}
+              onPress={() => setSelectedCategory(cat.id)}
             >
-              {cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Ionicons
+                name={CATEGORY_ICONS[cat.id] as any}
+                size={18}
+                color={selectedCategory === cat.id ? CATEGORY_COLORS[cat.id] : colors.text.tertiary}
+              />
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === cat.id && { color: CATEGORY_COLORS[cat.id] },
+                ]}
+              >
+                {getCategoryName(cat.id)}
+              </Text>
+            </PressableScale>
+          ))}
+        </ScrollView>
+      </AnimatedContainer>
 
       {/* Period Selector */}
-      <View style={styles.periodRow}>
-        {PERIODS.map((period) => (
-          <TouchableOpacity
-            key={period.id}
-            style={[
-              styles.periodButton,
-              selectedPeriod === period.id && styles.periodButtonActive,
-            ]}
-            onPress={() => setSelectedPeriod(period.id)}
-          >
-            <Text
+      <AnimatedContainer animation="fadeInUp" delay={150}>
+        <View style={styles.periodRow}>
+          {PERIODS.map((period) => (
+            <TouchableOpacity
+              key={period.id}
               style={[
-                styles.periodText,
-                selectedPeriod === period.id && styles.periodTextActive,
+                styles.periodButton,
+                selectedPeriod === period.id && styles.periodButtonActive,
               ]}
+              onPress={() => setSelectedPeriod(period.id)}
             >
-              {period.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text
+                style={[
+                  styles.periodText,
+                  selectedPeriod === period.id && styles.periodTextActive,
+                ]}
+              >
+                {t(period.labelKey)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </AnimatedContainer>
 
       {/* Leaderboard */}
       <ScrollView
@@ -189,110 +184,117 @@ export default function Leaderboards() {
         ) : leaderboardData?.entries?.length > 0 ? (
           <>
             {/* Top 3 Podium */}
-            <View style={styles.podium}>
-              {/* 2nd Place */}
-              {leaderboardData.entries[1] && (
-                <View style={[styles.podiumPlace, styles.podiumSecond]}>
-                  <Avatar
-                    uri={leaderboardData.entries[1].picture}
-                    name={leaderboardData.entries[1].name}
-                    size="md"
-                  />
-                  <View style={[styles.podiumRank, { backgroundColor: '#C0C0C0' }]}>
-                    <Text style={styles.podiumRankText}>2</Text>
+            <AnimatedContainer animation="scaleIn" delay={200}>
+              <View style={styles.podium}>
+                {/* 2nd Place */}
+                {leaderboardData.entries[1] && (
+                  <View style={[styles.podiumPlace, styles.podiumSecond]}>
+                    <Avatar
+                      uri={leaderboardData.entries[1].picture}
+                      name={leaderboardData.entries[1].name}
+                      size="md"
+                    />
+                    <View style={[styles.podiumRank, { backgroundColor: '#C0C0C0' }]}>
+                      <Text style={styles.podiumRankText}>2</Text>
+                    </View>
+                    <Text style={styles.podiumName} numberOfLines={1}>
+                      {leaderboardData.entries[1].name?.split(' ')[0]}
+                    </Text>
+                    <Text style={styles.podiumScore}>
+                      {Math.round(leaderboardData.entries[1].score)}
+                    </Text>
                   </View>
-                  <Text style={styles.podiumName} numberOfLines={1}>
-                    {leaderboardData.entries[1].name?.split(' ')[0]}
-                  </Text>
-                  <Text style={styles.podiumScore}>
-                    {Math.round(leaderboardData.entries[1].score)}
-                  </Text>
-                </View>
-              )}
+                )}
 
-              {/* 1st Place */}
-              {leaderboardData.entries[0] && (
-                <View style={[styles.podiumPlace, styles.podiumFirst]}>
-                  <Ionicons name="trophy" size={24} color="#FFD700" style={{ marginBottom: 8 }} />
-                  <Avatar
-                    uri={leaderboardData.entries[0].picture}
-                    name={leaderboardData.entries[0].name}
-                    size="lg"
-                    showBorder
-                  />
-                  <View style={[styles.podiumRank, { backgroundColor: '#FFD700' }]}>
-                    <Text style={styles.podiumRankText}>1</Text>
+                {/* 1st Place */}
+                {leaderboardData.entries[0] && (
+                  <View style={[styles.podiumPlace, styles.podiumFirst]}>
+                    <Ionicons name="trophy" size={24} color="#FFD700" style={{ marginBottom: 8 }} />
+                    <Avatar
+                      uri={leaderboardData.entries[0].picture}
+                      name={leaderboardData.entries[0].name}
+                      size="lg"
+                      showBorder
+                    />
+                    <View style={[styles.podiumRank, { backgroundColor: '#FFD700' }]}>
+                      <Text style={styles.podiumRankText}>1</Text>
+                    </View>
+                    <Text style={styles.podiumName} numberOfLines={1}>
+                      {leaderboardData.entries[0].name?.split(' ')[0]}
+                    </Text>
+                    <Text style={styles.podiumScore}>
+                      {Math.round(leaderboardData.entries[0].score)}
+                    </Text>
                   </View>
-                  <Text style={styles.podiumName} numberOfLines={1}>
-                    {leaderboardData.entries[0].name?.split(' ')[0]}
-                  </Text>
-                  <Text style={styles.podiumScore}>
-                    {Math.round(leaderboardData.entries[0].score)}
-                  </Text>
-                </View>
-              )}
+                )}
 
-              {/* 3rd Place */}
-              {leaderboardData.entries[2] && (
-                <View style={[styles.podiumPlace, styles.podiumThird]}>
-                  <Avatar
-                    uri={leaderboardData.entries[2].picture}
-                    name={leaderboardData.entries[2].name}
-                    size="md"
-                  />
-                  <View style={[styles.podiumRank, { backgroundColor: '#CD7F32' }]}>
-                    <Text style={styles.podiumRankText}>3</Text>
+                {/* 3rd Place */}
+                {leaderboardData.entries[2] && (
+                  <View style={[styles.podiumPlace, styles.podiumThird]}>
+                    <Avatar
+                      uri={leaderboardData.entries[2].picture}
+                      name={leaderboardData.entries[2].name}
+                      size="md"
+                    />
+                    <View style={[styles.podiumRank, { backgroundColor: '#CD7F32' }]}>
+                      <Text style={styles.podiumRankText}>3</Text>
+                    </View>
+                    <Text style={styles.podiumName} numberOfLines={1}>
+                      {leaderboardData.entries[2].name?.split(' ')[0]}
+                    </Text>
+                    <Text style={styles.podiumScore}>
+                      {Math.round(leaderboardData.entries[2].score)}
+                    </Text>
                   </View>
-                  <Text style={styles.podiumName} numberOfLines={1}>
-                    {leaderboardData.entries[2].name?.split(' ')[0]}
-                  </Text>
-                  <Text style={styles.podiumScore}>
-                    {Math.round(leaderboardData.entries[2].score)}
-                  </Text>
-                </View>
-              )}
-            </View>
+                )}
+              </View>
+            </AnimatedContainer>
 
             {/* Rest of Rankings */}
-            {leaderboardData.entries.slice(3).map((entry: any) => (
-              <Card
-                key={entry.user_id}
-                style={[
-                  styles.rankCard,
-                  entry.user_id === user?.user_id && styles.currentUserCard,
-                ]}
-              >
-                <View style={styles.rankContent}>
-                  <Text style={styles.rankNumber}>#{entry.rank}</Text>
-                  <Avatar uri={entry.picture} name={entry.name} size="sm" />
-                  <View style={styles.rankInfo}>
-                    <Text style={styles.rankName}>{entry.name}</Text>
-                    <Text style={styles.rankLevel}>Level {entry.level}</Text>
+            {leaderboardData.entries.slice(3).map((entry: any, index: number) => (
+              <AnimatedContainer key={entry.user_id} animation="fadeInUp" delay={300 + index * 30}>
+                <Card
+                  style={[
+                    styles.rankCard,
+                    entry.user_id === user?.user_id && styles.currentUserCard,
+                  ]}
+                >
+                  <View style={styles.rankContent}>
+                    <Text style={styles.rankNumber}>#{entry.rank}</Text>
+                    <Avatar uri={entry.picture} name={entry.name} size="sm" />
+                    <View style={styles.rankInfo}>
+                      <Text style={styles.rankName}>{entry.name}</Text>
+                      <Text style={styles.rankLevel}>{t('gamification.level')} {entry.level}</Text>
+                    </View>
+                    <Text style={styles.rankScore}>{Math.round(entry.score)}</Text>
                   </View>
-                  <Text style={styles.rankScore}>{Math.round(entry.score)}</Text>
-                </View>
-              </Card>
+                </Card>
+              </AnimatedContainer>
             ))}
           </>
         ) : (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="trophy-outline" size={48} color={colors.text.tertiary} />
-            <Text style={styles.emptyText}>No rankings yet</Text>
-            <Text style={styles.emptySubtext}>Be the first to climb the leaderboard!</Text>
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={200}>
+            <Card style={styles.emptyCard}>
+              <Ionicons name="trophy-outline" size={48} color={colors.text.tertiary} />
+              <Text style={styles.emptyText}>{t('leaderboards.noRankings')}</Text>
+              <Text style={styles.emptySubtext}>{t('leaderboards.beFirst')}</Text>
+            </Card>
+          </AnimatedContainer>
         )}
 
         {/* Scoring Info */}
         {categories.find(c => c.id === selectedCategory) && (
-          <Card style={styles.infoCard}>
-            <View style={styles.infoHeader}>
-              <Ionicons name="information-circle" size={18} color={colors.accent.secondary} />
-              <Text style={styles.infoTitle}>Scoring Formula</Text>
-            </View>
-            <Text style={styles.infoFormula}>
-              {categories.find(c => c.id === selectedCategory)?.formula}
-            </Text>
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={400}>
+            <Card style={styles.infoCard}>
+              <View style={styles.infoHeader}>
+                <Ionicons name="information-circle" size={18} color={colors.accent.secondary} />
+                <Text style={styles.infoTitle}>{t('leaderboards.scoringFormula')}</Text>
+              </View>
+              <Text style={styles.infoFormula}>
+                {categories.find(c => c.id === selectedCategory)?.formula}
+              </Text>
+            </Card>
+          </AnimatedContainer>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -451,6 +453,8 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   emptyText: {
     fontSize: typography.sizes.lg,
