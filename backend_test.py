@@ -223,10 +223,10 @@ print('Session token: ' + sessionToken);
     def test_create_match(self):
         """Test creating a gaming match"""
         match_data = {
-            "name": "Test Gaming Match",
+            "title": "Test Gaming Match",
             "game_type": "fps",
-            "max_players": 8,
-            "description": "A test gaming match for Studio Hub Elite"
+            "game_name": "Counter-Strike Studio",
+            "participants": []
         }
         
         success, data = self.make_request("POST", "/matches", match_data)
