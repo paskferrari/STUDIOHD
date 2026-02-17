@@ -12,22 +12,37 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
 import { Card, Avatar, Badge, StatCard, ProgressRing, LoadingSkeleton } from '../../src/components/ui';
+import { AnimatedContainer, AnimatedCounter, PressableScale, StaggeredList } from '../../src/components/animation';
+import { OnboardingChecklist, ProductTour } from '../../src/components/onboarding';
 import { useAuthStore } from '../../src/store/authStore';
 import { useAttendanceStore } from '../../src/store/attendanceStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { api } from '../../src/utils/api';
+import { t, formatDate, formatRelativeTime } from '../../src/i18n';
 
 export default function Dashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { isCheckedIn, setCheckedIn } = useAttendanceStore();
+  const { 
+    tutorialCompleted, 
+    showTutorial, 
+    setShowTutorial,
+    completeChecklistItem,
+  } = useOnboardingStore();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checklistCollapsed, setChecklistCollapsed] = useState(false);
 
   useEffect(() => {
     loadData();
+    // Show tutorial for new users
+    if (!tutorialCompleted && user?.onboarding_completed) {
+      setTimeout(() => setShowTutorial(true), 1000);
+    }
   }, []);
 
   const loadData = async () => {
@@ -43,6 +58,13 @@ export default function Dashboard() {
       setActivities(activityData);
       setSessions(sessionData);
       setCheckedIn(attendanceStatus.is_checked_in, attendanceStatus.attendance);
+      
+      // Update checklist items
+      if (profileData.onboarding_completed) completeChecklistItem('profileCompleted');
+      if (profileData.stats?.attendance_count > 0) completeChecklistItem('firstCheckIn');
+      if (profileData.stats?.track_count > 0) completeChecklistItem('firstTrack');
+      if (profileData.stats?.match_count > 0) completeChecklistItem('firstMatch');
+      if (profileData.badges?.length > 0) completeChecklistItem('earnedBadge');
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -74,6 +96,12 @@ export default function Dashboard() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Product Tour */}
+      <ProductTour
+        visible={showTutorial}
+        onComplete={() => setShowTutorial(false)}
+      />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -86,199 +114,242 @@ export default function Dashboard() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Member'}</Text>
+        <AnimatedContainer animation="fadeInUp">
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.greeting}>{t('dashboard.welcomeBack')}</Text>
+              <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Membro'}</Text>
+            </View>
+            <PressableScale onPress={() => router.push('/(tabs)/profile')}>
+              <Avatar uri={user?.picture} name={user?.name} size="md" showBorder />
+            </PressableScale>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-            <Avatar uri={user?.picture} name={user?.name} size="md" showBorder />
-          </TouchableOpacity>
-        </View>
+        </AnimatedContainer>
+
+        {/* Onboarding Checklist */}
+        <OnboardingChecklist
+          collapsed={checklistCollapsed}
+          onToggle={() => setChecklistCollapsed(!checklistCollapsed)}
+        />
 
         {/* Level & XP Card */}
-        <Card variant="accent" style={styles.levelCard}>
-          <View style={styles.levelContent}>
-            <View style={styles.levelInfo}>
-              <View style={styles.levelBadge}>
-                <Ionicons name="star" size={16} color={colors.accent.secondary} />
-                <Text style={styles.levelText}>Level {stats?.level || 1}</Text>
+        <AnimatedContainer animation="fadeInUp" delay={100}>
+          <Card variant="accent" style={styles.levelCard}>
+            <View style={styles.levelContent}>
+              <View style={styles.levelInfo}>
+                <View style={styles.levelBadge}>
+                  <Ionicons name="star" size={16} color={colors.accent.secondary} />
+                  <Text style={styles.levelText}>{t('dashboard.level', { level: stats?.level || 1 })}</Text>
+                </View>
+                <AnimatedCounter
+                  value={stats?.xp || 0}
+                  suffix=" XP"
+                  style={styles.xpText}
+                />
+                <Text style={styles.xpSubtext}>
+                  {t('dashboard.xpToNextLevel', { xp: 1000 - (stats?.xp % 1000 || 0) })}
+                </Text>
               </View>
-              <Text style={styles.xpText}>{stats?.xp || 0} XP</Text>
-              <Text style={styles.xpSubtext}>{1000 - (stats?.xp % 1000 || 0)} XP to next level</Text>
+              <ProgressRing
+                progress={xpProgress}
+                size={70}
+                color={colors.accent.secondary}
+                showPercentage={false}
+                label={t('dashboard.progress')}
+              />
             </View>
-            <ProgressRing
-              progress={xpProgress}
-              size={70}
-              color={colors.accent.secondary}
-              showPercentage={false}
-              label="Progress"
-            />
-          </View>
-          
-          {/* Streak */}
-          <View style={styles.streakContainer}>
-            <Ionicons name="flame" size={20} color={colors.accent.primary} />
-            <Text style={styles.streakText}>{stats?.streak_days || 0} day streak</Text>
-            {(stats?.streak_days || 0) >= 7 && (
-              <Badge label="On Fire!" variant="gold" size="sm" />
-            )}
-          </View>
-        </Card>
+            
+            {/* Streak */}
+            <View style={styles.streakContainer}>
+              <Ionicons name="flame" size={20} color={colors.accent.primary} />
+              <Text style={styles.streakText}>
+                {t('dashboard.dayStreak', { count: stats?.streak_days || 0 })}
+              </Text>
+              {(stats?.streak_days || 0) >= 7 && (
+                <Badge label={t('dashboard.onFire')} variant="gold" size="sm" />
+              )}
+            </View>
+          </Card>
+        </AnimatedContainer>
 
         {/* Quick Stats */}
-        <Text style={styles.sectionTitle}>Your Stats</Text>
+        <AnimatedContainer animation="fadeInUp" delay={200}>
+          <Text style={styles.sectionTitle}>{t('dashboard.yourStats')}</Text>
+        </AnimatedContainer>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statsRow}
         >
-          <StatCard
-            title="Sessions"
-            value={stats?.stats?.attendance_count || 0}
-            icon="calendar"
-            iconColor={colors.accent.primary}
-            style={styles.statCard}
-          />
-          <StatCard
-            title="Tracks"
-            value={stats?.stats?.track_count || 0}
-            icon="musical-notes"
-            iconColor={colors.accent.secondary}
-            style={styles.statCard}
-          />
-          <StatCard
-            title="Contributions"
-            value={stats?.stats?.contribution_count || 0}
-            icon="git-merge"
-            iconColor={colors.accent.tertiary}
-            style={styles.statCard}
-          />
-          <StatCard
-            title="Matches"
-            value={stats?.stats?.match_count || 0}
-            icon="game-controller"
-            iconColor={colors.status.info}
-            style={styles.statCard}
-          />
+          <AnimatedContainer animation="fadeInRight" delay={250}>
+            <StatCard
+              title={t('dashboard.sessions')}
+              value={stats?.stats?.attendance_count || 0}
+              icon="calendar"
+              iconColor={colors.accent.primary}
+              style={styles.statCard}
+            />
+          </AnimatedContainer>
+          <AnimatedContainer animation="fadeInRight" delay={300}>
+            <StatCard
+              title={t('dashboard.tracks')}
+              value={stats?.stats?.track_count || 0}
+              icon="musical-notes"
+              iconColor={colors.accent.secondary}
+              style={styles.statCard}
+            />
+          </AnimatedContainer>
+          <AnimatedContainer animation="fadeInRight" delay={350}>
+            <StatCard
+              title={t('dashboard.contributions')}
+              value={stats?.stats?.contribution_count || 0}
+              icon="git-merge"
+              iconColor={colors.accent.tertiary}
+              style={styles.statCard}
+            />
+          </AnimatedContainer>
+          <AnimatedContainer animation="fadeInRight" delay={400}>
+            <StatCard
+              title={t('dashboard.matches')}
+              value={stats?.stats?.match_count || 0}
+              icon="game-controller"
+              iconColor={colors.status.info}
+              style={styles.statCard}
+            />
+          </AnimatedContainer>
         </ScrollView>
 
         {/* Check-In Card */}
-        <Card variant="elevated" style={styles.checkInCard}>
-          <View style={styles.checkInContent}>
-            <View>
-              <Text style={styles.checkInTitle}>
-                {isCheckedIn ? 'Currently Checked In' : 'Ready to Start?'}
-              </Text>
-              <Text style={styles.checkInSubtitle}>
-                {isCheckedIn
-                  ? 'Tap to check out and earn XP'
-                  : 'Check in to track your studio time'}
-              </Text>
+        <AnimatedContainer animation="fadeInUp" delay={300}>
+          <Card variant="elevated" style={styles.checkInCard}>
+            <View style={styles.checkInContent}>
+              <View>
+                <Text style={styles.checkInTitle}>
+                  {isCheckedIn ? t('dashboard.currentlyCheckedIn') : t('dashboard.readyToStart')}
+                </Text>
+                <Text style={styles.checkInSubtitle}>
+                  {isCheckedIn
+                    ? t('dashboard.checkOutPrompt')
+                    : t('dashboard.checkInPrompt')}
+                </Text>
+              </View>
+              <PressableScale
+                style={[
+                  styles.checkInButton,
+                  isCheckedIn && styles.checkOutButton,
+                ]}
+                onPress={() => router.push('/(tabs)/attendance')}
+              >
+                <Ionicons
+                  name={isCheckedIn ? 'log-out' : 'log-in'}
+                  size={24}
+                  color={colors.text.primary}
+                />
+              </PressableScale>
             </View>
-            <TouchableOpacity
-              style={[
-                styles.checkInButton,
-                isCheckedIn && styles.checkOutButton,
-              ]}
-              onPress={() => router.push('/(tabs)/attendance')}
-            >
-              <Ionicons
-                name={isCheckedIn ? 'log-out' : 'log-in'}
-                size={24}
-                color={colors.text.primary}
-              />
-            </TouchableOpacity>
-          </View>
-        </Card>
+          </Card>
+        </AnimatedContainer>
 
         {/* Upcoming Sessions */}
         {sessions.length > 0 && (
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            {sessions.map((session) => (
-              <Card key={session.session_id} style={styles.sessionCard}>
-                <View style={styles.sessionContent}>
-                  <View style={styles.sessionIcon}>
-                    <Ionicons
-                      name={session.session_type === 'music' ? 'musical-notes' : 'game-controller'}
-                      size={20}
-                      color={colors.accent.primary}
-                    />
+            <AnimatedContainer animation="fadeInUp" delay={400}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('dashboard.upcomingSessions')}</Text>
+                <TouchableOpacity>
+                  <Text style={styles.seeAllText}>{t('common.seeAll')}</Text>
+                </TouchableOpacity>
+              </View>
+            </AnimatedContainer>
+            {sessions.map((session, index) => (
+              <AnimatedContainer key={session.session_id} animation="fadeInUp" delay={450 + index * 50}>
+                <Card style={styles.sessionCard}>
+                  <View style={styles.sessionContent}>
+                    <View style={styles.sessionIcon}>
+                      <Ionicons
+                        name={session.session_type === 'music' ? 'musical-notes' : 'game-controller'}
+                        size={20}
+                        color={colors.accent.primary}
+                      />
+                    </View>
+                    <View style={styles.sessionInfo}>
+                      <Text style={styles.sessionTitle}>{session.title}</Text>
+                      <Text style={styles.sessionTime}>
+                        {formatDate(session.start_time, 'short')} {t('time.at')} {formatDate(session.start_time, 'time')}
+                      </Text>
+                    </View>
+                    <Badge label={session.session_type} variant="accent" size="sm" />
                   </View>
-                  <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionTitle}>{session.title}</Text>
-                    <Text style={styles.sessionTime}>
-                      {new Date(session.start_time).toLocaleDateString()} at{' '}
-                      {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-                  <Badge label={session.session_type} variant="accent" size="sm" />
-                </View>
-              </Card>
+                </Card>
+              </AnimatedContainer>
             ))}
           </>
         )}
 
         {/* Activity Feed */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Community Activity</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
+        <AnimatedContainer animation="fadeInUp" delay={500}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('dashboard.communityActivity')}</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>{t('common.seeAll')}</Text>
+            </TouchableOpacity>
+          </View>
+        </AnimatedContainer>
         {activities.length > 0 ? (
-          activities.map((activity) => (
-            <Card key={activity.activity_id} style={styles.activityCard}>
-              <View style={styles.activityContent}>
-                <Avatar name={activity.user_name} size="sm" />
-                <View style={styles.activityInfo}>
-                  <Text style={styles.activityText}>{activity.description}</Text>
-                  <Text style={styles.activityTime}>
-                    {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
+          activities.map((activity, index) => (
+            <AnimatedContainer key={activity.activity_id} animation="fadeInUp" delay={550 + index * 50}>
+              <Card style={styles.activityCard}>
+                <View style={styles.activityContent}>
+                  <Avatar name={activity.user_name} size="sm" />
+                  <View style={styles.activityInfo}>
+                    <Text style={styles.activityText}>{activity.description}</Text>
+                    <Text style={styles.activityTime}>
+                      {formatRelativeTime(activity.created_at)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Card>
+              </Card>
+            </AnimatedContainer>
           ))
         ) : (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="chatbubbles-outline" size={32} color={colors.text.tertiary} />
-            <Text style={styles.emptyText}>No recent activity</Text>
-            <Text style={styles.emptySubtext}>Be the first to create some buzz!</Text>
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={550}>
+            <Card style={styles.emptyCard}>
+              <Ionicons name="chatbubbles-outline" size={32} color={colors.text.tertiary} />
+              <Text style={styles.emptyText}>{t('dashboard.noActivity')}</Text>
+              <Text style={styles.emptySubtext}>{t('dashboard.beFirst')}</Text>
+            </Card>
+          </AnimatedContainer>
         )}
 
         {/* Badges Preview */}
         {stats?.badges && stats.badges.length > 0 && (
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Badges</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
+            <AnimatedContainer animation="fadeInUp" delay={600}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{t('dashboard.recentBadges')}</Text>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+                  <Text style={styles.seeAllText}>{t('common.viewAll')}</Text>
+                </TouchableOpacity>
+              </View>
+            </AnimatedContainer>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.badgesRow}
             >
-              {stats.badges.slice(0, 5).map((badge: any) => (
-                <View key={badge.badge_id} style={styles.badgeItem}>
-                  <View style={[styles.badgeIcon, { backgroundColor: `${colors.rarity[badge.rarity as keyof typeof colors.rarity]}20` }]}>
-                    <Ionicons
-                      name={badge.icon as any}
-                      size={24}
-                      color={colors.rarity[badge.rarity as keyof typeof colors.rarity] || colors.text.secondary}
-                    />
+              {stats.badges.slice(0, 5).map((badge: any, index: number) => (
+                <AnimatedContainer key={badge.badge_id} animation="scaleIn" delay={650 + index * 50}>
+                  <View style={styles.badgeItem}>
+                    <View style={[styles.badgeIcon, { backgroundColor: `${colors.rarity[badge.rarity as keyof typeof colors.rarity]}20` }]}>
+                      <Ionicons
+                        name={badge.icon as any}
+                        size={24}
+                        color={colors.rarity[badge.rarity as keyof typeof colors.rarity] || colors.text.secondary}
+                      />
+                    </View>
+                    <Text style={styles.badgeName}>{badge.name}</Text>
                   </View>
-                  <Text style={styles.badgeName}>{badge.name}</Text>
-                </View>
+                </AnimatedContainer>
               ))}
             </ScrollView>
           </>
