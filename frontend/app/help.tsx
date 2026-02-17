@@ -10,10 +10,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
-import { Card } from '../../src/components/ui';
-import { AnimatedContainer, StaggeredList } from '../../src/components/animation';
-import { t } from '../../src/i18n';
+import { colors, spacing, typography, borderRadius } from '../src/theme/colors';
+import { Card } from '../src/components/ui';
+import { AnimatedContainer, StaggeredList } from '../src/components/animation';
+import { t } from '../src/i18n';
 
 interface HelpSection {
   id: string;
