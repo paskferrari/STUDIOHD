@@ -17,17 +17,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
 import { Card, Button, Avatar, Badge, LoadingSkeleton } from '../../src/components/ui';
+import { AnimatedContainer, PressableScale } from '../../src/components/animation';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/utils/api';
+import { t } from '../../src/i18n';
 
 const CONTRIBUTION_TYPES = [
-  { id: 'vocals', label: 'Vocals', icon: 'mic' },
-  { id: 'beat', label: 'Beat', icon: 'musical-note' },
-  { id: 'mix', label: 'Mix', icon: 'options' },
-  { id: 'master', label: 'Master', icon: 'flash' },
-  { id: 'instrument', label: 'Instrument', icon: 'guitar' },
-  { id: 'writing', label: 'Writing', icon: 'create' },
-  { id: 'production', label: 'Production', icon: 'headset' },
+  { id: 'vocals', labelKey: 'music.contributionTypes.vocals', icon: 'mic' },
+  { id: 'beat', labelKey: 'music.contributionTypes.beat', icon: 'musical-note' },
+  { id: 'mix', labelKey: 'music.contributionTypes.mix', icon: 'options' },
+  { id: 'master', labelKey: 'music.contributionTypes.master', icon: 'flash' },
+  { id: 'instrument', labelKey: 'music.contributionTypes.instrument', icon: 'guitar' },
+  { id: 'writing', labelKey: 'music.contributionTypes.writing', icon: 'create' },
+  { id: 'production', labelKey: 'music.contributionTypes.production', icon: 'headset' },
 ];
 
 export default function Music() {
@@ -63,7 +65,7 @@ export default function Music() {
 
   const handleCreateTrack = async () => {
     if (!newTrack.title.trim()) {
-      Alert.alert('Error', 'Please enter a track title');
+      Alert.alert(t('common.error'), t('music.enterTitle'));
       return;
     }
 
@@ -76,10 +78,10 @@ export default function Music() {
       });
       setShowCreateModal(false);
       setNewTrack({ title: '', description: '', genre: '' });
-      Alert.alert('Success', 'Track created! +50 XP earned');
+      Alert.alert(t('common.success'), t('music.trackCreated'));
       await loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create track');
+      Alert.alert(t('common.error'), error.message || t('errors.generic'));
     } finally {
       setCreateLoading(false);
     }
@@ -121,112 +123,123 @@ export default function Music() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Music</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Ionicons name="add" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-        </View>
+        <AnimatedContainer animation="fadeInUp">
+          <View style={styles.header}>
+            <Text style={styles.pageTitle}>{t('music.title')}</Text>
+            <PressableScale
+              style={styles.addButton}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Ionicons name="add" size={24} color={colors.text.primary} />
+            </PressableScale>
+          </View>
+        </AnimatedContainer>
 
         {/* Stats */}
-        <View style={styles.statsRow}>
-          <Card style={styles.statCard}>
-            <Ionicons name="musical-notes" size={20} color={colors.accent.primary} />
-            <Text style={styles.statValue}>{tracks.length}</Text>
-            <Text style={styles.statLabel}>Tracks</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Ionicons name="heart" size={20} color={colors.accent.tertiary} />
-            <Text style={styles.statValue}>
-              {tracks.reduce((sum, t) => sum + (t.likes || 0), 0)}
-            </Text>
-            <Text style={styles.statLabel}>Total Likes</Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Ionicons name="headset" size={20} color={colors.accent.secondary} />
-            <Text style={styles.statValue}>
-              {tracks.reduce((sum, t) => sum + (t.listens || 0), 0)}
-            </Text>
-            <Text style={styles.statLabel}>Listens</Text>
-          </Card>
-        </View>
+        <AnimatedContainer animation="fadeInUp" delay={100}>
+          <View style={styles.statsRow}>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="musical-notes" size={20} color={colors.accent.primary} />
+              <Text style={styles.statValue}>{tracks.length}</Text>
+              <Text style={styles.statLabel}>{t('dashboard.tracks')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="heart" size={20} color={colors.accent.tertiary} />
+              <Text style={styles.statValue}>
+                {tracks.reduce((sum, t) => sum + (t.likes || 0), 0)}
+              </Text>
+              <Text style={styles.statLabel}>{t('music.totalLikes')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statCard}>
+              <Ionicons name="headset" size={20} color={colors.accent.secondary} />
+              <Text style={styles.statValue}>
+                {tracks.reduce((sum, t) => sum + (t.listens || 0), 0)}
+              </Text>
+              <Text style={styles.statLabel}>{t('music.listens')}</Text>
+            </PressableScale>
+          </View>
+        </AnimatedContainer>
 
         {/* Tracks List */}
-        <Text style={styles.sectionTitle}>All Tracks</Text>
+        <AnimatedContainer animation="fadeInUp" delay={200}>
+          <Text style={styles.sectionTitle}>{t('music.allTracks')}</Text>
+        </AnimatedContainer>
         {tracks.length > 0 ? (
-          tracks.map((track) => (
-            <Card key={track.track_id} style={styles.trackCard}>
-              <TouchableOpacity
-                onPress={() => router.push(`/track/${track.track_id}`)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.trackHeader}>
-                  <View style={styles.trackCover}>
-                    <Ionicons name="musical-notes" size={28} color={colors.accent.primary} />
-                  </View>
-                  <View style={styles.trackInfo}>
-                    <Text style={styles.trackTitle}>{track.title}</Text>
-                    {track.genre && (
-                      <Badge label={track.genre} variant="accent" size="sm" />
-                    )}
-                    <Text style={styles.trackCreator}>by {track.created_by === user?.user_id ? 'You' : 'Member'}</Text>
-                  </View>
-                </View>
-
-                {/* Contributors */}
-                {track.contributor_details && track.contributor_details.length > 0 && (
-                  <View style={styles.contributorsRow}>
-                    <View style={styles.avatarStack}>
-                      {track.contributor_details.slice(0, 4).map((c: any, i: number) => (
-                        <View key={c.user_id} style={[styles.stackedAvatar, { marginLeft: i > 0 ? -10 : 0 }]}>
-                          <Avatar uri={c.picture} name={c.name} size="sm" />
-                        </View>
-                      ))}
+          tracks.map((track, index) => (
+            <AnimatedContainer key={track.track_id} animation="fadeInUp" delay={250 + index * 50}>
+              <Card style={styles.trackCard}>
+                <PressableScale
+                  onPress={() => router.push(`/track/${track.track_id}`)}
+                >
+                  <View style={styles.trackHeader}>
+                    <View style={styles.trackCover}>
+                      <Ionicons name="musical-notes" size={28} color={colors.accent.primary} />
                     </View>
-                    <Text style={styles.contributorsText}>
-                      {track.contributor_details.length} contributor{track.contributor_details.length !== 1 ? 's' : ''}
-                    </Text>
+                    <View style={styles.trackInfo}>
+                      <Text style={styles.trackTitle}>{track.title}</Text>
+                      {track.genre && (
+                        <Badge label={track.genre} variant="accent" size="sm" />
+                      )}
+                      <Text style={styles.trackCreator}>
+                        {t('music.by')} {track.created_by === user?.user_id ? t('music.you') : 'Membro'}
+                      </Text>
+                    </View>
                   </View>
-                )}
 
-                {/* Metrics */}
-                <View style={styles.metricsRow}>
-                  <View style={styles.metricItem}>
-                    <Ionicons name="headset" size={16} color={colors.text.tertiary} />
-                    <Text style={styles.metricText}>{track.listens || 0}</Text>
+                  {/* Contributors */}
+                  {track.contributor_details && track.contributor_details.length > 0 && (
+                    <View style={styles.contributorsRow}>
+                      <View style={styles.avatarStack}>
+                        {track.contributor_details.slice(0, 4).map((c: any, i: number) => (
+                          <View key={c.user_id} style={[styles.stackedAvatar, { marginLeft: i > 0 ? -10 : 0 }]}>
+                            <Avatar uri={c.picture} name={c.name} size="sm" />
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={styles.contributorsText}>
+                        {track.contributor_details.length} {t('music.contributors').toLowerCase()}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Metrics */}
+                  <View style={styles.metricsRow}>
+                    <View style={styles.metricItem}>
+                      <Ionicons name="headset" size={16} color={colors.text.tertiary} />
+                      <Text style={styles.metricText}>{track.listens || 0}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.metricItem}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleLike(track.track_id);
+                      }}
+                    >
+                      <Ionicons name="heart" size={16} color={colors.accent.tertiary} />
+                      <Text style={styles.metricText}>{track.likes || 0}</Text>
+                    </TouchableOpacity>
+                    <View style={styles.metricItem}>
+                      <Ionicons name="share" size={16} color={colors.text.tertiary} />
+                      <Text style={styles.metricText}>{track.shares || 0}</Text>
+                    </View>
                   </View>
-                  <TouchableOpacity
-                    style={styles.metricItem}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleLike(track.track_id);
-                    }}
-                  >
-                    <Ionicons name="heart" size={16} color={colors.accent.tertiary} />
-                    <Text style={styles.metricText}>{track.likes || 0}</Text>
-                  </TouchableOpacity>
-                  <View style={styles.metricItem}>
-                    <Ionicons name="share" size={16} color={colors.text.tertiary} />
-                    <Text style={styles.metricText}>{track.shares || 0}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </Card>
+                </PressableScale>
+              </Card>
+            </AnimatedContainer>
           ))
         ) : (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="musical-notes-outline" size={48} color={colors.text.tertiary} />
-            <Text style={styles.emptyText}>No tracks yet</Text>
-            <Text style={styles.emptySubtext}>Create the first track!</Text>
-            <Button
-              title="Create Track"
-              onPress={() => setShowCreateModal(true)}
-              style={{ marginTop: spacing.md }}
-            />
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={250}>
+            <Card style={styles.emptyCard}>
+              <Ionicons name="musical-notes-outline" size={48} color={colors.text.tertiary} />
+              <Text style={styles.emptyText}>{t('music.noTracks')}</Text>
+              <Text style={styles.emptySubtext}>{t('music.createFirst')}</Text>
+              <Button
+                title={t('music.createTrack')}
+                onPress={() => setShowCreateModal(true)}
+                style={{ marginTop: spacing.md }}
+              />
+            </Card>
+          </AnimatedContainer>
         )}
       </ScrollView>
 
@@ -243,41 +256,41 @@ export default function Music() {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Track</Text>
+              <Text style={styles.modalTitle}>{t('music.createTrack')}</Text>
               <TouchableOpacity onPress={() => setShowCreateModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Title *</Text>
+              <Text style={styles.inputLabel}>{t('music.trackTitle')} *</Text>
               <TextInput
                 style={styles.input}
                 value={newTrack.title}
                 onChangeText={(text) => setNewTrack({ ...newTrack, title: text })}
-                placeholder="Enter track title"
+                placeholder={t('music.trackTitlePlaceholder')}
                 placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Genre</Text>
+              <Text style={styles.inputLabel}>{t('music.genre')}</Text>
               <TextInput
                 style={styles.input}
                 value={newTrack.genre}
                 onChangeText={(text) => setNewTrack({ ...newTrack, genre: text })}
-                placeholder="e.g., Hip-Hop, R&B, Pop"
+                placeholder={t('music.genrePlaceholder')}
                 placeholderTextColor={colors.text.tertiary}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Description</Text>
+              <Text style={styles.inputLabel}>{t('music.description')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={newTrack.description}
                 onChangeText={(text) => setNewTrack({ ...newTrack, description: text })}
-                placeholder="Describe your track..."
+                placeholder={t('music.descriptionPlaceholder')}
                 placeholderTextColor={colors.text.tertiary}
                 multiline
                 numberOfLines={3}
@@ -285,7 +298,7 @@ export default function Music() {
             </View>
 
             <Button
-              title="Create Track"
+              title={t('music.createTrack')}
               onPress={handleCreateTrack}
               loading={createLoading}
               size="lg"
@@ -339,6 +352,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: spacing.xs,
     paddingVertical: spacing.md,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   statValue: {
     fontSize: typography.sizes.xl,
@@ -426,6 +441,8 @@ const styles = StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   emptyText: {
     fontSize: typography.sizes.lg,
