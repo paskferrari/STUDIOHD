@@ -1,7 +1,7 @@
 {
-  "installCommand": "npm ci --prefix frontend",
-  "buildCommand": "npm run build:web --prefix frontend && cp frontend/dist/+not-found.html frontend/dist/404.html",
-  "devCommand": "npm run web --prefix frontend",
+  "installCommand": "yarn --cwd frontend install --frozen-lockfile",
+  "buildCommand": "yarn --cwd frontend build:web && cp frontend/dist/+not-found.html frontend/dist/404.html",
+  "devCommand": "yarn --cwd frontend web",
   "outputDirectory": "frontend/dist",
   "cleanUrls": true,
   "redirects": [

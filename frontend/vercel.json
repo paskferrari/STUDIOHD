@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm ci",
-  "buildCommand": "npm run build:web && cp dist/+not-found.html dist/404.html",
+  "installCommand": "yarn install --frozen-lockfile",
+  "buildCommand": "yarn build:web && cp dist/+not-found.html dist/404.html",
   "outputDirectory": "dist",
   "framework": null,
   "cleanUrls": true,
