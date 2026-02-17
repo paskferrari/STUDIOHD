@@ -13,8 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, borderRadius } from '../../src/theme/colors';
 import { Card, Avatar, Badge, ProgressRing, Button, LoadingSkeleton } from '../../src/components/ui';
+import { AnimatedContainer, PressableScale } from '../../src/components/animation';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/utils/api';
+import { t, formatDate } from '../../src/i18n';
 
 export default function Profile() {
   const router = useRouter();
@@ -55,12 +57,12 @@ export default function Profile() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('auth.logout'),
+      t('auth.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Logout',
+          text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -78,6 +80,11 @@ export default function Profile() {
 
   const getRarityColor = (rarity: string) => {
     return colors.rarity[rarity as keyof typeof colors.rarity] || colors.text.secondary;
+  };
+
+  const getRarityLabel = (rarity: string) => {
+    const key = `gamification.rarity.${rarity}`;
+    return t(key);
   };
 
   if (loading) {
@@ -106,170 +113,195 @@ export default function Profile() {
         }
       >
         {/* Header Card */}
-        <Card variant="elevated" style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <Avatar uri={user?.picture} name={user?.name} size="xl" showBorder />
-            <TouchableOpacity style={styles.editButton}>
-              <Ionicons name="pencil" size={16} color={colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.profileName}>{user?.name}</Text>
-          <Text style={styles.profileEmail}>{user?.email}</Text>
-          
-          {/* Role Badges */}
-          <View style={styles.rolesRow}>
-            {user?.roles?.map((role) => (
-              <Badge
-                key={role}
-                label={role.charAt(0).toUpperCase() + role.slice(1)}
-                variant="accent"
-                icon={role === 'music' ? 'musical-notes' : role === 'gaming' ? 'game-controller' : 'guitar'}
-              />
-            ))}
-          </View>
-        </Card>
+        <AnimatedContainer animation="fadeInUp">
+          <Card variant="elevated" style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <Avatar uri={user?.picture} name={user?.name} size="xl" showBorder />
+              <PressableScale style={styles.editButton}>
+                <Ionicons name="pencil" size={16} color={colors.text.primary} />
+              </PressableScale>
+            </View>
+            
+            <Text style={styles.profileName}>{user?.name}</Text>
+            <Text style={styles.profileEmail}>{user?.email}</Text>
+            
+            {/* Role Badges */}
+            <View style={styles.rolesRow}>
+              {user?.roles?.map((role) => (
+                <Badge
+                  key={role}
+                  label={role.charAt(0).toUpperCase() + role.slice(1)}
+                  variant="accent"
+                  icon={role === 'music' ? 'musical-notes' : role === 'gaming' ? 'game-controller' : 'guitar'}
+                />
+              ))}
+            </View>
+          </Card>
+        </AnimatedContainer>
 
         {/* Level & XP */}
-        <Card style={styles.levelCard}>
-          <View style={styles.levelRow}>
-            <View style={styles.levelInfo}>
-              <View style={styles.levelBadge}>
-                <Ionicons name="star" size={18} color={colors.accent.secondary} />
-                <Text style={styles.levelText}>Level {profile?.level || 1}</Text>
+        <AnimatedContainer animation="fadeInUp" delay={100}>
+          <Card style={styles.levelCard}>
+            <View style={styles.levelRow}>
+              <View style={styles.levelInfo}>
+                <View style={styles.levelBadge}>
+                  <Ionicons name="star" size={18} color={colors.accent.secondary} />
+                  <Text style={styles.levelText}>{t('gamification.level')} {profile?.level || 1}</Text>
+                </View>
+                <Text style={styles.xpText}>{gamificationStats?.xp || 0} / {gamificationStats?.xp_for_next_level || 1000} XP</Text>
               </View>
-              <Text style={styles.xpText}>{gamificationStats?.xp || 0} / {gamificationStats?.xp_for_next_level || 1000} XP</Text>
+              <ProgressRing
+                progress={gamificationStats?.progress_percent || 0}
+                size={70}
+                color={colors.accent.secondary}
+              />
             </View>
-            <ProgressRing
-              progress={gamificationStats?.progress_percent || 0}
-              size={70}
-              color={colors.accent.secondary}
-            />
-          </View>
-          
-          {/* Streak */}
-          <View style={styles.streakRow}>
-            <Ionicons name="flame" size={22} color={colors.accent.primary} />
-            <Text style={styles.streakValue}>{profile?.streak_days || 0}</Text>
-            <Text style={styles.streakLabel}>day streak</Text>
-          </View>
-        </Card>
+            
+            {/* Streak */}
+            <View style={styles.streakRow}>
+              <Ionicons name="flame" size={22} color={colors.accent.primary} />
+              <Text style={styles.streakValue}>{profile?.streak_days || 0}</Text>
+              <Text style={styles.streakLabel}>{t('gamification.streak').toLowerCase()}</Text>
+            </View>
+          </Card>
+        </AnimatedContainer>
 
         {/* Stats Grid */}
-        <Text style={styles.sectionTitle}>Statistics</Text>
-        <View style={styles.statsGrid}>
-          <Card style={styles.statBox}>
-            <Ionicons name="calendar" size={24} color={colors.accent.primary} />
-            <Text style={styles.statValue}>{profile?.stats?.attendance_count || 0}</Text>
-            <Text style={styles.statLabel}>Sessions</Text>
-          </Card>
-          <Card style={styles.statBox}>
-            <Ionicons name="musical-notes" size={24} color={colors.accent.secondary} />
-            <Text style={styles.statValue}>{profile?.stats?.track_count || 0}</Text>
-            <Text style={styles.statLabel}>Tracks</Text>
-          </Card>
-          <Card style={styles.statBox}>
-            <Ionicons name="git-merge" size={24} color={colors.accent.tertiary} />
-            <Text style={styles.statValue}>{profile?.stats?.contribution_count || 0}</Text>
-            <Text style={styles.statLabel}>Contributions</Text>
-          </Card>
-          <Card style={styles.statBox}>
-            <Ionicons name="game-controller" size={24} color={colors.status.info} />
-            <Text style={styles.statValue}>{profile?.stats?.match_count || 0}</Text>
-            <Text style={styles.statLabel}>Matches</Text>
-          </Card>
-        </View>
+        <AnimatedContainer animation="fadeInUp" delay={200}>
+          <Text style={styles.sectionTitle}>{t('profile.statistics')}</Text>
+          <View style={styles.statsGrid}>
+            <PressableScale style={styles.statBox}>
+              <Ionicons name="calendar" size={24} color={colors.accent.primary} />
+              <Text style={styles.statValue}>{profile?.stats?.attendance_count || 0}</Text>
+              <Text style={styles.statLabel}>{t('dashboard.sessions')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statBox}>
+              <Ionicons name="musical-notes" size={24} color={colors.accent.secondary} />
+              <Text style={styles.statValue}>{profile?.stats?.track_count || 0}</Text>
+              <Text style={styles.statLabel}>{t('dashboard.tracks')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statBox}>
+              <Ionicons name="git-merge" size={24} color={colors.accent.tertiary} />
+              <Text style={styles.statValue}>{profile?.stats?.contribution_count || 0}</Text>
+              <Text style={styles.statLabel}>{t('dashboard.contributions')}</Text>
+            </PressableScale>
+            <PressableScale style={styles.statBox}>
+              <Ionicons name="game-controller" size={24} color={colors.status.info} />
+              <Text style={styles.statValue}>{profile?.stats?.match_count || 0}</Text>
+              <Text style={styles.statLabel}>{t('dashboard.matches')}</Text>
+            </PressableScale>
+          </View>
+        </AnimatedContainer>
 
         {/* Badges Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <Badge label={`${badges.length} earned`} variant="gold" size="sm" />
-        </View>
+        <AnimatedContainer animation="fadeInUp" delay={300}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t('profile.achievements')}</Text>
+            <Badge label={t('gamification.badgesEarned', { count: badges.length })} variant="gold" size="sm" />
+          </View>
+        </AnimatedContainer>
         
         {badges.length > 0 ? (
           <View style={styles.badgesGrid}>
-            {badges.map((badge) => (
-              <Card key={badge.badge_id} style={styles.badgeCard}>
-                <View style={[styles.badgeIconContainer, { backgroundColor: `${getRarityColor(badge.rarity)}20` }]}>
-                  <Ionicons
-                    name={badge.icon as any}
-                    size={28}
-                    color={getRarityColor(badge.rarity)}
-                  />
-                </View>
-                <Text style={styles.badgeName}>{badge.name}</Text>
-                <Text style={styles.badgeRarity}>{badge.rarity}</Text>
-              </Card>
+            {badges.map((badge, index) => (
+              <AnimatedContainer key={badge.badge_id} animation="scaleIn" delay={350 + index * 30}>
+                <Card style={styles.badgeCard}>
+                  <View style={[styles.badgeIconContainer, { backgroundColor: `${getRarityColor(badge.rarity)}20` }]}>
+                    <Ionicons
+                      name={badge.icon as any}
+                      size={28}
+                      color={getRarityColor(badge.rarity)}
+                    />
+                  </View>
+                  <Text style={styles.badgeName}>{badge.name}</Text>
+                  <Text style={styles.badgeRarity}>{getRarityLabel(badge.rarity)}</Text>
+                </Card>
+              </AnimatedContainer>
             ))}
           </View>
         ) : (
-          <Card style={styles.emptyBadges}>
-            <Ionicons name="ribbon-outline" size={36} color={colors.text.tertiary} />
-            <Text style={styles.emptyText}>No badges yet</Text>
-            <Text style={styles.emptySubtext}>Complete activities to earn badges!</Text>
-          </Card>
+          <AnimatedContainer animation="fadeInUp" delay={350}>
+            <Card style={styles.emptyBadges}>
+              <Ionicons name="ribbon-outline" size={36} color={colors.text.tertiary} />
+              <Text style={styles.emptyText}>{t('gamification.noBadges')}</Text>
+              <Text style={styles.emptySubtext}>{t('gamification.earnBadges')}</Text>
+            </Card>
+          </AnimatedContainer>
         )}
 
         {/* Recent XP Events */}
         {gamificationStats?.recent_events?.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            {gamificationStats.recent_events.slice(0, 5).map((event: any) => (
-              <Card key={event.event_id} style={styles.eventCard}>
-                <View style={styles.eventContent}>
-                  <View style={styles.eventIcon}>
-                    <Ionicons
-                      name={event.event_type === 'attendance' ? 'calendar' : event.event_type === 'music' ? 'musical-notes' : 'star'}
-                      size={18}
-                      color={colors.accent.secondary}
-                    />
+            <AnimatedContainer animation="fadeInUp" delay={400}>
+              <Text style={styles.sectionTitle}>{t('profile.recentActivity')}</Text>
+            </AnimatedContainer>
+            {gamificationStats.recent_events.slice(0, 5).map((event: any, index: number) => (
+              <AnimatedContainer key={event.event_id} animation="fadeInUp" delay={450 + index * 30}>
+                <Card style={styles.eventCard}>
+                  <View style={styles.eventContent}>
+                    <View style={styles.eventIcon}>
+                      <Ionicons
+                        name={event.event_type === 'attendance' ? 'calendar' : event.event_type === 'music' ? 'musical-notes' : 'star'}
+                        size={18}
+                        color={colors.accent.secondary}
+                      />
+                    </View>
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventDescription}>{event.description}</Text>
+                      <Text style={styles.eventTime}>
+                        {formatDate(event.created_at, 'short')}
+                      </Text>
+                    </View>
+                    <Badge label={`+${event.xp_amount} XP`} variant="gold" size="sm" />
                   </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventDescription}>{event.description}</Text>
-                    <Text style={styles.eventTime}>
-                      {new Date(event.created_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Badge label={`+${event.xp_amount} XP`} variant="gold" size="sm" />
-                </View>
-              </Card>
+                </Card>
+              </AnimatedContainer>
             ))}
           </>
         )}
 
         {/* Settings */}
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <Card style={styles.settingsCard}>
-          <TouchableOpacity style={styles.settingsItem}>
-            <Ionicons name="person-outline" size={22} color={colors.text.secondary} />
-            <Text style={styles.settingsText}>Edit Profile</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-          </TouchableOpacity>
-          <View style={styles.settingsDivider} />
-          <TouchableOpacity style={styles.settingsItem}>
-            <Ionicons name="notifications-outline" size={22} color={colors.text.secondary} />
-            <Text style={styles.settingsText}>Notifications</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-          </TouchableOpacity>
-          <View style={styles.settingsDivider} />
-          <TouchableOpacity style={styles.settingsItem}>
-            <Ionicons name="help-circle-outline" size={22} color={colors.text.secondary} />
-            <Text style={styles.settingsText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-          </TouchableOpacity>
-        </Card>
+        <AnimatedContainer animation="fadeInUp" delay={500}>
+          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
+          <Card style={styles.settingsCard}>
+            <PressableScale style={styles.settingsItem}>
+              <Ionicons name="person-outline" size={22} color={colors.text.secondary} />
+              <Text style={styles.settingsText}>{t('profile.editProfile')}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+            </PressableScale>
+            <View style={styles.settingsDivider} />
+            <PressableScale style={styles.settingsItem}>
+              <Ionicons name="notifications-outline" size={22} color={colors.text.secondary} />
+              <Text style={styles.settingsText}>{t('profile.notifications')}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+            </PressableScale>
+            <View style={styles.settingsDivider} />
+            <PressableScale 
+              style={styles.settingsItem}
+              onPress={() => router.push('/help')}
+            >
+              <Ionicons name="help-circle-outline" size={22} color={colors.text.secondary} />
+              <Text style={styles.settingsText}>{t('profile.helpSupport')}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+            </PressableScale>
+          </Card>
+        </AnimatedContainer>
 
         {/* Logout */}
-        <Button
-          title="Logout"
-          onPress={handleLogout}
-          variant="outline"
-          style={styles.logoutButton}
-          icon={<Ionicons name="log-out" size={18} color={colors.accent.primary} style={{ marginRight: spacing.sm }} />}
-        />
+        <AnimatedContainer animation="fadeInUp" delay={550}>
+          <Button
+            title={t('auth.logout')}
+            onPress={handleLogout}
+            variant="outline"
+            style={styles.logoutButton}
+            icon={<Ionicons name="log-out" size={18} color={colors.accent.primary} style={{ marginRight: spacing.sm }} />}
+          />
+        </AnimatedContainer>
 
         {/* Version */}
-        <Text style={styles.versionText}>Studio Hub Elite v1.0.0</Text>
+        <AnimatedContainer animation="fadeInUp" delay={600}>
+          <Text style={styles.versionText}>{t('profile.version', { version: '1.0.0' })}</Text>
+        </AnimatedContainer>
       </ScrollView>
     </SafeAreaView>
   );
@@ -394,6 +426,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md,
     marginBottom: spacing.sm,
+    backgroundColor: colors.background.card,
+    borderRadius: borderRadius.lg,
   },
   statValue: {
     fontSize: typography.sizes.xl,
