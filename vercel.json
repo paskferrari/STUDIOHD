@@ -1,0 +1,10 @@
+{
+  "installCommand": "npm ci --prefix frontend",
+  "buildCommand": "npm run build:web --prefix frontend && cp frontend/dist/+not-found.html frontend/dist/404.html",
+  "devCommand": "npm run web --prefix frontend",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/match/:id", "destination": "/match/[id].html" },
+    { "source": "/track/:id", "destination": "/track/[id].html" }
+  ]
+}

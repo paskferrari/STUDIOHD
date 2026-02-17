@@ -137,7 +137,7 @@ export default function HelpCenter() {
             </View>
             <Text style={styles.heroTitle}>{t('help.title')}</Text>
             <Text style={styles.heroSubtitle}>
-              Trova risposte alle tue domande e scopri come ottenere il massimo dall'app.
+              Trova risposte alle tue domande e scopri come ottenere il massimo dall&apos;app.
             </Text>
           </View>
         </AnimatedContainer>
@@ -211,7 +211,7 @@ export default function HelpCenter() {
             <Ionicons name="mail" size={32} color={colors.accent.secondary} />
             <Text style={styles.contactTitle}>{t('help.contact')}</Text>
             <Text style={styles.contactText}>
-              Hai ancora bisogno di aiuto? Contattaci all'indirizzo support@studiohub.elite
+              Hai ancora bisogno di aiuto? Contattaci all&apos;indirizzo support@studiohub.elite
             </Text>
           </Card>
         </AnimatedContainer>
