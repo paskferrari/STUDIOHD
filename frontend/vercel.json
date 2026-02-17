@@ -9,6 +9,7 @@
   ],
   "rewrites": [
     { "source": "/match/:id", "destination": "/match/[id].html" },
-    { "source": "/track/:id", "destination": "/track/[id].html" }
+    { "source": "/track/:id", "destination": "/track/[id].html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
