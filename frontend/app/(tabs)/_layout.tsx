@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, StyleSheet, Platform } from 'react-native';
 import { colors, typography } from '../../src/theme/colors';
+import { t } from '../../src/i18n';
 
 export default function TabsLayout() {
   return (
@@ -19,7 +20,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
@@ -30,7 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="attendance"
         options={{
-          title: 'Attendance',
+          title: t('nav.attendance'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} />
@@ -41,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="music"
         options={{
-          title: 'Music',
+          title: t('nav.music'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'musical-notes' : 'musical-notes-outline'} size={24} color={color} />
@@ -52,7 +53,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="gaming"
         options={{
-          title: 'Gaming',
+          title: t('nav.gaming'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'game-controller' : 'game-controller-outline'} size={24} color={color} />
@@ -63,7 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="leaderboards"
         options={{
-          title: 'Rankings',
+          title: t('nav.rankings'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
@@ -74,7 +75,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('nav.profile'),
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
