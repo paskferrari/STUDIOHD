@@ -66,8 +66,8 @@ export default function Profile() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.post('/auth/logout', {});
-              setUser(null);
+              const { logout } = useAuthStore.getState();
+              await logout();
               router.replace('/login');
             } catch (error) {
               console.error('Logout error:', error);
@@ -132,7 +132,7 @@ export default function Profile() {
                   key={role}
                   label={role.charAt(0).toUpperCase() + role.slice(1)}
                   variant="accent"
-                  icon={role === 'music' ? 'musical-notes' : role === 'gaming' ? 'game-controller' : 'guitar'}
+                  icon={role === 'music' ? 'musical-notes' : role === 'gaming' ? 'game-controller' : 'musical-notes'}
                 />
               ))}
             </View>

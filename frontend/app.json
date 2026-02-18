@@ -37,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://ipnoieoqieavihzwvdtr.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlwbm9pZW9xaWVhdmloend2ZHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNTUzOTYsImV4cCI6MjA4NjkzMTM5Nn0.KuCzyq485Jc4i0TepCJ_K0ju0JGcc8wjflsj8_QbVys",
+      "EXPO_PUBLIC_SUPABASE_REDIRECT_URL": "exp://127.0.0.1:8081/--/auth-callback",
+      "EXPO_PUBLIC_BACKEND_URL": "http://localhost:8000"
     }
   }
 }

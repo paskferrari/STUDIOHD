@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Platform,
   AccessibilityInfo,
+  Alert,
+  TextInput,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -21,8 +23,8 @@ import { colors, spacing, typography, borderRadius } from '../src/theme/colors';
 import { spring, duration } from '../src/theme/motion';
 import { PressableScale } from '../src/components/animation';
 import { t } from '../src/i18n';
-
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+import { supabase } from '../src/lib/supabase';
+import { useAuthStore } from '../src/store/authStore';
 
 export default function Login() {
   const router = useRouter();
@@ -32,6 +34,11 @@ export default function Login() {
   const featuresOpacity = useSharedValue(0);
   const buttonOpacity = useSharedValue(0);
   const [reducedMotion, setReducedMotion] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [isSignUp, setIsSignUp] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
@@ -69,14 +76,71 @@ export default function Login() {
     opacity: buttonOpacity.value,
   }));
 
-  const handleGoogleLogin = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const redirectUrl = window.location.origin + '/auth-callback';
-      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-    } else {
-      // For native apps, we'll handle differently
-      console.log('Native auth not implemented');
+  const handleSignIn = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      const u = data.user;
+      if (!u) throw new Error('Nessun utente');
+      const userData = {
+        user_id: u.id,
+        email: u.email!,
+        name: u.user_metadata?.name || u.email!,
+        picture: u.user_metadata?.picture || null,
+        roles: [],
+        level: 1,
+        xp: 0,
+        streak_days: 0,
+        onboarding_completed: false,
+        goals: [],
+        is_admin: false,
+      };
+      setUser(userData);
+      router.replace('/onboarding/profile-setup');
+    } catch (e: any) {
+      Alert.alert('Errore', e.message || 'Accesso non riuscito');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) throw error;
+      if (!data.session) {
+        Alert.alert('Registrazione', 'Controlla la tua email per confermare');
+        setIsSignUp(false);
+        return;
+      }
+      const u = data.session.user;
+      const userData = {
+        user_id: u.id,
+        email: u.email!,
+        name: u.user_metadata?.name || u.email!,
+        picture: u.user_metadata?.picture || null,
+        roles: [],
+        level: 1,
+        xp: 0,
+        streak_days: 0,
+        onboarding_completed: false,
+        goals: [],
+        is_admin: false,
+      };
+      setUser(userData);
+      router.replace('/onboarding/profile-setup');
+    } catch (e: any) {
+      Alert.alert('Errore', e.message || 'Registrazione non riuscita');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,14 +183,39 @@ export default function Login() {
           </View>
         </Animated.View>
 
-        {/* Login Button */}
+        {/* Auth Form */}
         <Animated.View style={[styles.loginSection, buttonAnimatedStyle]}>
-          <PressableScale onPress={handleGoogleLogin} style={styles.googleButton}>
-            <View style={styles.googleIconContainer}>
-              <Text style={styles.googleIcon}>G</Text>
-            </View>
-            <Text style={styles.googleButtonText}>{t('auth.continueWithGoogle')}</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={colors.text.tertiary}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={colors.text.tertiary}
+            secureTextEntry
+            style={styles.input}
+          />
+          <PressableScale
+            onPress={isSignUp ? handleSignUp : handleSignIn}
+            style={styles.authButton}
+            disabled={loading}
+          >
+            <Text style={styles.authButtonText}>
+              {isSignUp ? 'Registrati' : 'Accedi'}
+            </Text>
           </PressableScale>
+          <TouchableOpacity onPress={() => setIsSignUp((v) => !v)} disabled={loading}>
+            <Text style={styles.toggleText}>
+              {isSignUp ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati'}
+            </Text>
+          </TouchableOpacity>
 
           <Text style={styles.termsText}>
             {t('auth.termsAgreement')}
@@ -206,34 +295,36 @@ const styles = StyleSheet.create({
   loginSection: {
     alignItems: 'center',
   },
-  googleButton: {
-    flexDirection: 'row',
+  input: {
+    width: '100%',
+    backgroundColor: colors.background.secondary,
+    color: colors.text.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  authButton: {
     alignItems: 'center',
-    backgroundColor: colors.text.primary,
+    backgroundColor: colors.accent.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.lg,
     width: '100%',
     justifyContent: 'center',
   },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.text.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  googleIcon: {
-    fontSize: 16,
-    fontWeight: typography.weights.bold,
-    color: colors.accent.primary,
-  },
-  googleButtonText: {
+  authButtonText: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
     color: colors.background.primary,
+  },
+  toggleText: {
+    fontSize: typography.sizes.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   termsText: {
     fontSize: typography.sizes.xs,

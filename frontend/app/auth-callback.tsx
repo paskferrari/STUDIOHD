@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'expo-router';
 import { colors, typography } from '../src/theme/colors';
 import { useAuthStore } from '../src/store/authStore';
-import { api } from '../src/utils/api';
+import { supabase } from '../src/lib/supabase';
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 
@@ -32,34 +32,36 @@ export default function AuthCallback() {
         throw new Error('Web platform required');
       }
 
-      // Extract session_id from URL fragment
-      const hash = window.location.hash;
-      const sessionIdMatch = hash.match(/session_id=([^&]+)/);
+      // Handle Supabase OAuth callback
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (!sessionIdMatch) {
-        throw new Error('No session ID found');
-      }
+      if (error) throw error;
+      if (!session) throw new Error('Nessuna sessione trovata');
 
-      const sessionId = sessionIdMatch[1];
+      // Extract user data from Supabase session
+      const userData = {
+        user_id: session.user.id,
+        email: session.user.email!,
+        name: session.user.user_metadata?.name || session.user.email!,
+        picture: session.user.user_metadata?.picture || null,
+        roles: [],
+        level: 1,
+        xp: 0,
+        streak_days: 0,
+        onboarding_completed: false,
+        goals: [],
+        is_admin: false,
+      };
 
-      // Exchange session_id for session_token
-      const response = await api.post<any>('/auth/session', {
-        session_id: sessionId,
-      });
+      setUser(userData);
 
-      if (response.user) {
-        setUser(response.user);
-        
-        // Clean URL and redirect
-        window.history.replaceState(null, '', window.location.pathname);
-        
-        if (response.user.onboarding_completed) {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/onboarding/profile-setup');
-        }
+      // Clean URL and redirect
+      window.history.replaceState(null, '', window.location.pathname);
+      
+      if (userData.onboarding_completed) {
+        router.replace('/(tabs)');
       } else {
-        throw new Error('No user data received');
+        router.replace('/onboarding/profile-setup');
       }
     } catch (err: any) {
       console.error('Auth error:', err);

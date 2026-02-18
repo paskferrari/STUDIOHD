@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
 from enum import Enum
+import jwt
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -289,7 +290,8 @@ class ActivityFeedItem(BaseModel):
 # ============== AUTH HELPERS ==============
 
 async def get_current_user(request: Request) -> User:
-    """Get current authenticated user from session token"""
+    """Get current authenticated user from session token or Supabase JWT"""
+    # Try to get session token from cookie or header
     session_token = request.cookies.get("session_token")
     
     if not session_token:
@@ -300,31 +302,82 @@ async def get_current_user(request: Request) -> User:
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    session_doc = await db.user_sessions.find_one(
-        {"session_token": session_token},
-        {"_id": 0}
-    )
+    # Check if this is a Supabase JWT token (starts with eyJ)
+    if session_token.startswith("eyJ"):
+        # This is a JWT token from Supabase
+        try:
+            
+            # Decode JWT without verification first to get user info
+            unverified_payload = jwt.decode(session_token, options={"verify_signature": False})
+            user_id = unverified_payload.get("sub")
+            email = unverified_payload.get("email")
+            
+            if not user_id or not email:
+                raise HTTPException(status_code=401, detail="Invalid JWT token")
+            
+            # Find user by email (Supabase uses email as primary identifier)
+            user_doc = await db.users.find_one(
+                {"email": email},
+                {"_id": 0}
+            )
+            
+            if not user_doc:
+                # User doesn't exist, create new user from JWT data
+                name = unverified_payload.get("name") or email.split("@")[0]
+                picture = unverified_payload.get("picture")
+                
+                new_user = User(
+                    user_id=user_id,
+                    email=email,
+                    name=name,
+                    picture=picture,
+                    roles=[],
+                    level=1,
+                    xp=0,
+                    streak_days=0,
+                    last_active=datetime.now(timezone.utc),
+                    onboarding_completed=False,
+                    goals=[],
+                    is_admin=False
+                )
+                
+                await db.users.insert_one(new_user.dict())
+                user_doc = new_user.dict()
+            
+            return User(**user_doc)
+            
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=401, detail="Invalid JWT token")
+        except Exception:
+            raise HTTPException(status_code=401, detail="Error processing JWT")
     
-    if not session_doc:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    
-    expires_at = session_doc["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Session expired")
-    
-    user_doc = await db.users.find_one(
-        {"user_id": session_doc["user_id"]},
-        {"_id": 0}
-    )
-    
-    if not user_doc:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return User(**user_doc)
+    else:
+        # This is a legacy session token
+        session_doc = await db.user_sessions.find_one(
+            {"session_token": session_token},
+            {"_id": 0}
+        )
+        
+        if not session_doc:
+            raise HTTPException(status_code=401, detail="Invalid session")
+        
+        expires_at = session_doc["expires_at"]
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        user_doc = await db.users.find_one(
+            {"user_id": session_doc["user_id"]},
+            {"_id": 0}
+        )
+        
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return User(**user_doc)
 
 async def get_optional_user(request: Request) -> Optional[User]:
     """Get current user if authenticated, None otherwise"""
@@ -335,83 +388,8 @@ async def get_optional_user(request: Request) -> Optional[User]:
 
 # ============== AUTH ENDPOINTS ==============
 
-@api_router.post("/auth/session")
-async def create_session(request: Request, response: Response):
-    """Exchange session_id from Emergent Auth for session_token"""
-    body = await request.json()
-    session_id = body.get("session_id")
-    
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
-    
-    # Call Emergent Auth to get user data
-    async with httpx.AsyncClient() as client:
-        auth_response = await client.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": session_id}
-        )
-    
-    if auth_response.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid session_id")
-    
-    auth_data = auth_response.json()
-    email = auth_data.get("email")
-    name = auth_data.get("name")
-    picture = auth_data.get("picture")
-    session_token = auth_data.get("session_token")
-    
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
-    
-    if existing_user:
-        user_id = existing_user["user_id"]
-        # Update user info
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "name": name,
-                "picture": picture,
-                "last_active": datetime.now(timezone.utc)
-            }}
-        )
-    else:
-        # Create new user
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        new_user = User(
-            user_id=user_id,
-            email=email,
-            name=name,
-            picture=picture
-        )
-        await db.users.insert_one(new_user.dict())
-    
-    # Create session
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    session = UserSession(
-        user_id=user_id,
-        session_token=session_token,
-        expires_at=expires_at
-    )
-    
-    # Delete old sessions for this user
-    await db.user_sessions.delete_many({"user_id": user_id})
-    await db.user_sessions.insert_one(session.dict())
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
-    # Get updated user
-    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    
-    return {"user": user_doc, "session_token": session_token}
+# Note: Authentication is now handled by Supabase on the client side
+# The session creation endpoint has been removed as it's no longer needed
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(get_current_user)):
@@ -1647,9 +1625,11 @@ app.add_middleware(
     allow_origins=[
         "https://studiohd.vercel.app",
         "http://localhost:19006",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:8081",
+        "http://localhost:8082"
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https?://localhost:\d+|https://.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )

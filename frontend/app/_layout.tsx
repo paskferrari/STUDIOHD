@@ -3,11 +3,10 @@ import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-rout
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../src/store/authStore';
-import { api } from '../src/utils/api';
 import { colors } from '../src/theme/colors';
 
 export default function RootLayout() {
-  const { user, isLoading, setUser, setLoading } = useAuthStore();
+  const { user, isLoading, setUser, setLoading, checkAuth } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
@@ -18,21 +17,20 @@ export default function RootLayout() {
 
   // Check auth status on mount
   useEffect(() => {
-    checkAuth();
+    checkAuthStatus();
   }, []);
 
   // Handle navigation based on auth state
   useEffect(() => {
     if (!isReady || isLoading || !isNavigationReady) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
     const isLoginScreen = segments[0] === 'login';
     const isAuthCallback = segments[0] === 'auth-callback';
     const isHelpScreen = segments[0] === 'help';
 
-    if (!user && !inAuthGroup && !isLoginScreen && !isAuthCallback) {
+    if (!user && !isLoginScreen && !isAuthCallback) {
       // Not authenticated, redirect to login
       router.replace('/login');
     } else if (user && !user.onboarding_completed && !inOnboarding) {
@@ -44,10 +42,9 @@ export default function RootLayout() {
     }
   }, [user, segments, isLoading, isReady, isNavigationReady]);
 
-  const checkAuth = async () => {
+  const checkAuthStatus = async () => {
     try {
-      const userData = await api.get<any>('/auth/me');
-      setUser(userData);
+      await checkAuth();
     } catch (error) {
       setUser(null);
     } finally {

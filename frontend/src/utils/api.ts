@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { supabase } from '../lib/supabase';
 
 const API_BASE = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
   process.env.EXPO_PUBLIC_BACKEND_URL || 
@@ -6,6 +7,14 @@ const API_BASE = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL ||
 
 export const api = {
   baseUrl: API_BASE,
+
+  getToken(): string | null {
+    try {
+      return typeof window !== 'undefined' ? window.localStorage.getItem('session_token') : null;
+    } catch {
+      return null;
+    }
+  },
   
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE}/api${endpoint}`;
@@ -14,11 +23,17 @@ export const api = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || this.getToken();
+    if (token) {
+      (headers as any)['Authorization'] = `Bearer ${token}`;
+    }
     
     const response = await fetch(url, {
       ...options,
       headers,
-      credentials: 'include',
+      credentials: 'omit',
     });
     
     if (!response.ok) {

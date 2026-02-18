@@ -14,6 +14,7 @@ import { colors, spacing, typography, borderRadius } from '../../src/theme/color
 import { Button } from '../../src/components/ui';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/utils/api';
+import { supabase } from '../../src/lib/supabase';
 
 const GOALS = [
   { id: 'improve_skills', label: 'Improve my skills', icon: 'trending-up' },
@@ -47,13 +48,31 @@ export default function Goals() {
     setIsLoading(true);
     try {
       const roles = params.roles?.split(',') || [];
-      const response = await api.post<any>('/users/onboarding', {
-        name: params.name,
-        roles: roles,
-        goals: selectedGoals,
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          name: params.name,
+          roles,
+          goals: selectedGoals,
+          onboarding_completed: true,
+        },
       });
-
-      setUser(response);
+      if (error) throw error;
+      const u = data.user;
+      if (!u) throw new Error('Nessun utente');
+      const updated = {
+        user_id: u.id,
+        email: u.email!,
+        name: params.name,
+        picture: u.user_metadata?.picture || null,
+        roles,
+        level: 1,
+        xp: 0,
+        streak_days: 0,
+        onboarding_completed: true,
+        goals: selectedGoals,
+        is_admin: false,
+      };
+      setUser(updated);
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Onboarding error:', error);
